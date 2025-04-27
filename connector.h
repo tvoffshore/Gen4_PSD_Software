@@ -17,13 +17,14 @@ public:
 
 signals:
 
-private:
+private slots:
     void onPortConnect();
     void onPortOpened();
     void onPortClosed();
 
-    Ui::MainWindow *ui;
-    SerialPort *serialPort;
+private:
+    Ui::MainWindow *ui = nullptr;
+    SerialPort *serialPort = nullptr;
     QString portName;
     bool portListIsUpdating = false;
 };

@@ -62,8 +62,8 @@ void Connector::onPortConnect()
     bool isPortOpened = serialPort->isOpened();
     if (isPortOpened == false)
     {
-        int baudRate = ui->comboBoxBaudRate->currentIndex();
-        qDebug() << "Open" << portName << "baudrate" << ui->comboBoxBaudRate->currentText();
+        int baudRate = ui->comboBoxBaudRate->currentText().toInt();
+        qDebug() << "Open" << portName << "baudrate" << baudRate;
 
         bool result = serialPort->open(portName, baudRate);
         if (result == false)
