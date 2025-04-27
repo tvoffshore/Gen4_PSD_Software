@@ -110,7 +110,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QTextBrowser" name="textBrowserPortLogs">
+       <widget class="QTextBrowser" name="textBrowserLog">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -122,6 +122,19 @@
           <width>0</width>
           <height>0</height>
          </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Shape::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Plain</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonLogClear">
+        <property name="text">
+         <string>Clear</string>
         </property>
        </widget>
       </item>

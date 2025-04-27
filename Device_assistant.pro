@@ -11,6 +11,7 @@ CONFIG += c++17
 SOURCES += \
     communicator.cpp \
     connector.cpp \
+    logger.cpp \
     main.cpp \
     mainwindow.cpp \
     serialport.cpp
@@ -18,6 +19,7 @@ SOURCES += \
 HEADERS += \
     communicator.h \
     connector.h \
+    logger.h \
     mainwindow.h \
     serialport.h
 

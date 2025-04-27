@@ -20,6 +20,6 @@ public:
 private:
     bool eventFilter(QObject *watched, QEvent *event);
 
-    Ui::MainWindow *ui;
+    Ui::MainWindow *ui = nullptr;
 };
 #endif // MAINWINDOW_H
