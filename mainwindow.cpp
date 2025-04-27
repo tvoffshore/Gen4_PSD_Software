@@ -43,6 +43,9 @@ MainWindow::MainWindow(QWidget *parent)
         textBrowser->append(text);
     });
 
+    // Setup filter to catch specific UI events
+    ui->comboBoxPortName->installEventFilter(this);
+
     serialPort = new SerialPort(this);
     connector = new Connector(ui, serialPort, this);
 }
@@ -50,4 +53,17 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == ui->comboBoxPortName)
+    {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            connector->updatePortList();
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
 }

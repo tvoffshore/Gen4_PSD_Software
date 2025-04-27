@@ -18,6 +18,8 @@ public:
     ~MainWindow();
 
 private:
+    bool eventFilter(QObject *watched, QEvent *event);
+
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H
