@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 
+#include "communicator.h"
 #include "connector.h"
+#include "downloader.h"
 #include "logger.h"
 #include "serialport.h"
 
@@ -8,7 +10,9 @@
 
 namespace
 {
+Communicator *communicator = nullptr;
 Connector *connector = nullptr;
+Downloader *downloader = nullptr;
 Logger *logger = nullptr;
 SerialPort *serialPort = nullptr;
 }
@@ -25,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent)
     logger = new Logger(ui, this);
     serialPort = new SerialPort(this);
     connector = new Connector(ui, serialPort, this);
+    communicator = new Communicator(serialPort, this);
+    downloader = new Downloader(ui, communicator, this);
 }
 
 MainWindow::~MainWindow()

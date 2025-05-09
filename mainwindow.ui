@@ -143,10 +143,10 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tabWidget">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="tabConfig">
        <attribute name="title">
@@ -154,9 +154,209 @@
        </attribute>
       </widget>
       <widget class="QWidget" name="tabDownload">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <attribute name="title">
         <string>Download</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutRecent">
+          <item>
+           <widget class="QRadioButton" name="radioButtonRecent">
+            <property name="text">
+             <string>Recent data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelRecentPackFrom">
+            <property name="text">
+             <string>From packet:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxRecentPackFrom"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelRecentPackTo">
+            <property name="text">
+             <string>To packet:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxRecentPackTo"/>
+          </item>
+          <item>
+           <spacer name="horizontalRecent">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonRecentRequest">
+            <property name="text">
+             <string>Request</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutHistoric">
+          <item>
+           <widget class="QRadioButton" name="radioButtonHistoric">
+            <property name="text">
+             <string>Historical data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelHistoricDateTime">
+            <property name="text">
+             <string>Date time:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDateTimeEdit" name="dateTimeEditHistoric"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelHistoricPacketFrom">
+            <property name="text">
+             <string>From packet:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxHistoricPacketFrom"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelHistoricPacketTo">
+            <property name="text">
+             <string>To packet:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxHistoricPacketTo"/>
+          </item>
+          <item>
+           <spacer name="horizontalSpacerHistoric">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonHistoricRequest">
+            <property name="text">
+             <string>Request</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayoutType">
+          <item>
+           <widget class="QLabel" name="labelType">
+            <property name="text">
+             <string>Download type</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelTypeSensor">
+            <property name="text">
+             <string>Sensor:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxTypeSensor">
+            <property name="maximum">
+             <number>5</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelTypeData">
+            <property name="text">
+             <string>Data:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBoxTypeData">
+            <property name="maximum">
+             <number>2</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacerType">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonTypeRequest">
+            <property name="text">
+             <string>Request</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QPushButton" name="pushButtonSize">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Size</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonDownload">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Download</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>

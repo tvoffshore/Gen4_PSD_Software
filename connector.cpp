@@ -24,6 +24,9 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
     connect(serialPort, &SerialPort::closed, this, &Connector::onPortClosed);
 
     updatePortList();
+
+    ui->tabWidget->setEnabled(false);
+    ui->tabDownload->setEnabled(false);
 }
 
 void Connector::updatePortList()
@@ -89,6 +92,7 @@ void Connector::onPortOpened()
     ui->comboBoxBaudRate->setEnabled(false);
 
     ui->tabWidget->setEnabled(true);
+    ui->tabDownload->setEnabled(true);
 }
 
 void Connector::onPortClosed()
@@ -102,4 +106,5 @@ void Connector::onPortClosed()
     updatePortList();
 
     ui->tabWidget->setEnabled(false);
+    ui->tabDownload->setEnabled(false);
 }

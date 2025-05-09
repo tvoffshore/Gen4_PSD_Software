@@ -84,6 +84,7 @@ void SerialPort::close()
 
 void SerialPort::write(const QByteArray &data)
 {
+    qDebug() << "Write:" << data;
     const qint64 written = qSerialPort->write(data);
     if (written == data.size())
     {
