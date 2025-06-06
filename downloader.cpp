@@ -9,12 +9,12 @@ constexpr int dataTypeCount = 3;
 
 const char *fileNames[sensorTypeCount][dataTypeCount] =
 {
-    {"PSD_ADC1", "STAT_ADC1", "RAW_/ADC1"},
-    {"PSD_ADC2", "STAT_ADC2", "RAW_ADC2"},
     {"PSD_ACC", "STAT_ACC", "RAW_ACC"},
-    {"PSD_ACC_RES", "STAT_ACC_RES", "RAW_ACC_RES"},
     {"PSD_GYR", "STAT_GYR", "RAW_GYR"},
     {"PSD_ANG", "STAT_ANG", "RAW_ANG"},
+    {"PSD_ADC1", "STAT_ADC1", "RAW_/ADC1"},
+    {"PSD_ADC2", "STAT_ADC2", "RAW_ADC2"},
+    {"PSD_ACC_RES", "STAT_ACC_RES", "RAW_ACC_RES"},
 };
 }
 
@@ -28,17 +28,15 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
     ui->pushButtonRecentRequest->setEnabled(false);
     ui->pushButtonSize->setEnabled(true);
     ui->pushButtonDownload->setEnabled(true);
-    ui->spinBoxTypeSensor->setMaximum(sensorTypeCount - 1);
-    ui->spinBoxTypeData->setMaximum(dataTypeCount - 1);
 
     connect(ui->radioButtonHistoric, &QRadioButton::clicked, this, [=](){
-        qDebug() << "Historic checked";
+        qDebug() << "Historic data checked";
         ui->pushButtonHistoricRequest->setEnabled(true);
         ui->pushButtonRecentRequest->setEnabled(false);
     });
 
     connect(ui->radioButtonRecent, &QRadioButton::clicked, this, [=](){
-        qDebug() << "Recent checked";
+        qDebug() << "Recent data checked";
         ui->pushButtonRecentRequest->setEnabled(true);
         ui->pushButtonHistoricRequest->setEnabled(false);
     });
@@ -58,8 +56,8 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
     });
 
     connect(ui->pushButtonTypeRequest, &QPushButton::clicked, this, [=](){
-        int sensorType = ui->spinBoxTypeSensor->value();
-        int dataType = ui->spinBoxTypeData->value();
+        int sensorType = ui->comboBoxTypeSensor->currentIndex();
+        int dataType = ui->comboBoxTypeData->currentIndex();
         communicator->requestDownloadType(sensorType, dataType);
     });
 
@@ -71,8 +69,8 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
     connect(ui->pushButtonDownload, &QPushButton::clicked, this, [=](){
         if (endId >= startId)
         {
-            int sensorType = ui->spinBoxTypeSensor->value();
-            int dataType = ui->spinBoxTypeData->value();
+            int sensorType = ui->comboBoxTypeSensor->currentIndex();
+            int dataType = ui->comboBoxTypeData->currentIndex();
             QDateTime dateTime = QDateTime::currentDateTime();
             QString fileName = QString(fileNames[sensorType][dataType]) + "_" + dateTime.toString("yyyyMMdd_hhmmss") + ".bin";
 

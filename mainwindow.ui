@@ -297,10 +297,37 @@
            </widget>
           </item>
           <item>
-           <widget class="QSpinBox" name="spinBoxTypeSensor">
-            <property name="maximum">
-             <number>5</number>
-            </property>
+           <widget class="QComboBox" name="comboBoxTypeSensor">
+            <item>
+             <property name="text">
+              <string>Accel</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Gyro</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Angle</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Adc 1</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Adc 2</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Accel result</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item>
@@ -311,10 +338,22 @@
            </widget>
           </item>
           <item>
-           <widget class="QSpinBox" name="spinBoxTypeData">
-            <property name="maximum">
-             <number>2</number>
-            </property>
+           <widget class="QComboBox" name="comboBoxTypeData">
+            <item>
+             <property name="text">
+              <string>Psd</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Statistic</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Raw</string>
+             </property>
+            </item>
            </widget>
           </item>
           <item>
