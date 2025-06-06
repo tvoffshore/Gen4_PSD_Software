@@ -12,6 +12,7 @@ class Connector : public QObject
     Q_OBJECT
 public:
     explicit Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent = nullptr);
+    ~Connector();
 
     void updatePortList();
 

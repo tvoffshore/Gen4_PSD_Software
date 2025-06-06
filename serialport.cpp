@@ -22,6 +22,12 @@ SerialPort::SerialPort(QObject *parent)
     writeTimer->setSingleShot(true);
 }
 
+SerialPort::~SerialPort()
+{
+    delete qSerialPort;
+    delete writeTimer;
+}
+
 bool SerialPort::isOpened()
 {
     return qSerialPort->isOpen();

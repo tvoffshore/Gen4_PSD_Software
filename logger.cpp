@@ -39,3 +39,7 @@ Logger::Logger(Ui::MainWindow *ui, QObject *parent)
         ui->textBrowserLog->clear();
     });
 }
+
+Logger::~Logger()
+{
+}

@@ -47,6 +47,11 @@ Communicator::Communicator(SerialPort *serialPort, QObject *parent)
     waitTimer->setSingleShot(true);
 }
 
+Communicator::~Communicator()
+{
+    delete waitTimer;
+}
+
 bool Communicator::requestDownloadRecent(int startId, int endId)
 {
     QString data = downloadRecentCmd;

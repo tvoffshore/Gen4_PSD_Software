@@ -13,6 +13,7 @@ class Downloader : public QObject
     Q_OBJECT
 public:
     explicit Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *parent = nullptr);
+    ~Downloader();
 
 signals:
 

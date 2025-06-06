@@ -30,6 +30,7 @@ class Communicator : public QObject
     Q_OBJECT
 public:
     explicit Communicator(SerialPort *serialPort, QObject *parent = nullptr);
+    ~Communicator();
 
     bool requestDownloadRecent(int startId, int endId);
     bool requestDownloadHitoric(time_t startTime, int startId, int endId);

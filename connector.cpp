@@ -29,6 +29,10 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
     ui->tabDownload->setEnabled(false);
 }
 
+Connector::~Connector()
+{
+}
+
 void Connector::updatePortList()
 {
     portListIsUpdating = true;

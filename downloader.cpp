@@ -97,6 +97,11 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
     ui->dateTimeEditHistoric->setDateTime(dateTime);
 }
 
+Downloader::~Downloader()
+{
+    delete file;
+}
+
 void Downloader::onBinDataRead(QByteArray data)
 {
     qDebug() << "Bin data read, size" << data.size();

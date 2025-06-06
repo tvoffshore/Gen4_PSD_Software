@@ -12,6 +12,7 @@ class SerialPort : public QObject
     Q_OBJECT
 public:
     explicit SerialPort(QObject *parent = nullptr);
+    ~SerialPort();
 
     bool isOpened();
     bool open(const QString &portName, int baudRate);

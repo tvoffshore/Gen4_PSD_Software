@@ -10,6 +10,7 @@ class Logger : public QObject
     Q_OBJECT
 public:
     explicit Logger(Ui::MainWindow *ui, QObject *parent = nullptr);
+    ~Logger();
 
 signals:
 
