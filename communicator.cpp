@@ -4,7 +4,10 @@
 
 namespace
 {
-constexpr std::chrono::seconds readWaitTimeout = std::chrono::seconds{5};
+constexpr std::chrono::seconds keepAlivePeriod = std::chrono::seconds{2};
+constexpr std::chrono::seconds readWaitTimeout = std::chrono::seconds{1};
+
+const char *keepAliveCmd = "!123:KPLV\r";
 const char *downloadRecentCmd = "!123:DWNR=";
 const char *downloadHistoricCmd = "!123:DWNH=";
 const char *downloadTypeCmd = "!123:DWNT=";
@@ -38,6 +41,7 @@ Communicator::Communicator(SerialPort *serialPort, QObject *parent)
     : QObject{parent}
     , serialPort(serialPort)
     , waitTimer(new QTimer(this))
+    , keepAliveTimer(new QTimer(this))
 {
     connect(serialPort, &SerialPort::opened, this, &Communicator::onPortOpened);
     connect(serialPort, &SerialPort::closed, this, &Communicator::onPortClosed);
@@ -45,11 +49,15 @@ Communicator::Communicator(SerialPort *serialPort, QObject *parent)
 
     connect(waitTimer, &QTimer::timeout, this, &Communicator::onWaitTimeout);
     waitTimer->setSingleShot(true);
+
+    connect(keepAliveTimer, &QTimer::timeout, this, &Communicator::onKeepAliveTimeout);
+    keepAliveTimer->setSingleShot(false);
 }
 
 Communicator::~Communicator()
 {
     delete waitTimer;
+    delete keepAliveTimer;
 }
 
 bool Communicator::requestDownloadRecent(int startId, int endId)
@@ -105,11 +113,13 @@ bool Communicator::requestDownloadData()
 
 void Communicator::onPortOpened()
 {
+    keepAliveTimer->start(keepAlivePeriod);
+    sendKeepAlive();
 }
 
 void Communicator::onPortClosed()
 {
-
+    keepAliveTimer->stop();
 }
 
 void Communicator::onPortRead(QByteArray data)
@@ -117,6 +127,7 @@ void Communicator::onPortRead(QByteArray data)
     // qDebug() << "Read:" << data.size();
 
     waitTimer->start(readWaitTimeout);
+    keepAliveTimer->start(keepAlivePeriod);
 
     for (uint8_t byte : data)
     {
@@ -181,4 +192,15 @@ void Communicator::onPortRead(QByteArray data)
 void Communicator::onWaitTimeout()
 {
     state = State::WaitBinMagic;
+}
+
+void Communicator::onKeepAliveTimeout()
+{
+    sendKeepAlive();
+}
+
+bool Communicator::sendKeepAlive()
+{
+    serialPort->write(keepAliveCmd);
+    return true;
 }

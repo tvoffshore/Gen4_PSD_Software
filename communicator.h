@@ -46,10 +46,14 @@ private slots:
     void onPortClosed();
     void onPortRead(QByteArray data);
     void onWaitTimeout();
+    void onKeepAliveTimeout();
 
 private:
+    bool sendKeepAlive();
+
     SerialPort *serialPort = nullptr;
     QTimer *waitTimer = nullptr;
+    QTimer *keepAliveTimer = nullptr;
 
     State state = State::WaitBinMagic;
     BinHeader binHeader;
