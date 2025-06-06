@@ -3,10 +3,19 @@
 #include <QDebug>
 #include <QSerialPortInfo>
 
+namespace
+{
+constexpr std::chrono::seconds deviceOnlineTimeout = std::chrono::seconds{5};
+
+const QString deviceOnlineString("Device ONLINE");
+const QString deviceOfflineString("Device OFFLINE");
+}
+
 Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent)
     : QObject{parent}
     , ui(ui)
     , serialPort(serialPort)
+    , deviceOnlineTimer(new QTimer(this))
 {
     connect(ui->comboBoxPortName, &QComboBox::currentTextChanged, this, [=](const QString &text) {
         if (text != portName && text.isEmpty() == false &&
@@ -22,6 +31,12 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
 
     connect(serialPort, &SerialPort::opened, this, &Connector::onPortOpened);
     connect(serialPort, &SerialPort::closed, this, &Connector::onPortClosed);
+    connect(serialPort, &SerialPort::read, this, &Connector::onPortRead);
+
+    connect(deviceOnlineTimer, &QTimer::timeout, this, &Connector::onDeviceOnlineTimeout);
+    deviceOnlineTimer->setSingleShot(true);
+
+    ui->labelDeviceState->setText(deviceOfflineString);
 
     updatePortList();
 
@@ -31,6 +46,7 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
 
 Connector::~Connector()
 {
+    delete deviceOnlineTimer;
 }
 
 void Connector::updatePortList()
@@ -101,6 +117,13 @@ void Connector::onPortOpened()
 
 void Connector::onPortClosed()
 {
+    deviceOnlineTimer->stop();
+    if (isDeviceOnline == true)
+    {
+        isDeviceOnline = false;
+        ui->labelDeviceState->setText(deviceOfflineString);
+    }
+
     ui->pushButtonPortConnect->setText("Open");
     ui->pushButtonPortConnect->setChecked(false);
     ui->pushButtonPortConnect->setCheckable(false);
@@ -111,4 +134,29 @@ void Connector::onPortClosed()
 
     ui->tabWidget->setEnabled(false);
     ui->tabDownload->setEnabled(false);
+}
+
+void Connector::onPortRead(QByteArray data)
+{
+    if (data.size() > 0)
+    {
+        if (isDeviceOnline == false)
+        {
+            isDeviceOnline = true;
+            qInfo() << deviceOnlineString;
+            ui->labelDeviceState->setText(deviceOnlineString);
+        }
+
+        deviceOnlineTimer->start(deviceOnlineTimeout);
+    }
+}
+
+void Connector::onDeviceOnlineTimeout()
+{
+    if (isDeviceOnline == true)
+    {
+        isDeviceOnline = false;
+        qWarning() << deviceOfflineString;
+        ui->labelDeviceState->setText(deviceOfflineString);
+    }
 }

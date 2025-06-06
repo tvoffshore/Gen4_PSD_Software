@@ -110,6 +110,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="labelDeviceState">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QTextBrowser" name="textBrowserLog">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">

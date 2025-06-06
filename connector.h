@@ -1,8 +1,10 @@
 #ifndef CONNECTOR_H
 #define CONNECTOR_H
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 #include "serialport.h"
 #include "ui_MainWindow.h"
@@ -22,12 +24,17 @@ private slots:
     void onPortConnect();
     void onPortOpened();
     void onPortClosed();
+    void onPortRead(QByteArray data);
+    void onDeviceOnlineTimeout();
 
 private:
-    Ui::MainWindow *ui = nullptr;
-    SerialPort *serialPort = nullptr;
     QString portName;
     bool portListIsUpdating = false;
+    bool isDeviceOnline = false;
+
+    Ui::MainWindow *ui = nullptr;
+    SerialPort *serialPort = nullptr;
+    QTimer *deviceOnlineTimer = nullptr;
 };
 
 #endif // CONNECTOR_H
