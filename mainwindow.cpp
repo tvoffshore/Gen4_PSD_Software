@@ -7,6 +7,8 @@
 #include "serialport.h"
 
 #include <QDebug>
+#include <QMessageBox>
+#include <QVersionNumber>
 
 namespace
 {
@@ -15,6 +17,11 @@ Connector *connector = nullptr;
 Downloader *downloader = nullptr;
 Logger *logger = nullptr;
 SerialPort *serialPort = nullptr;
+
+// Major application version
+constexpr int versionMajor = 0;
+// Minor application version
+constexpr int versionMinor = 1;
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -25,6 +32,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Setup filter to catch specific UI events
     ui->comboBoxPortName->installEventFilter(this);
+
+    connect(ui->actionAboutApplication, &QAction::triggered, this, [=](){
+        QVersionNumber version(versionMajor, versionMinor);
+        QMessageBox::about(this, "About application", "Device assistant version " + version.toString());
+    });
+
+    connect(ui->actionAboutQt, &QAction::triggered, this, [=](){
+        QMessageBox::aboutQt(this, "About Qt");
+    });
 
     logger = new Logger(ui, this);
     serialPort = new SerialPort(this);
