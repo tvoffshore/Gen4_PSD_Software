@@ -110,19 +110,12 @@ void Connector::onPortOpened()
 
     ui->comboBoxPortName->setEnabled(false);
     ui->comboBoxBaudRate->setEnabled(false);
-
-    ui->tabWidget->setEnabled(true);
-    ui->tabDownload->setEnabled(true);
 }
 
 void Connector::onPortClosed()
 {
     deviceOnlineTimer->stop();
-    if (isDeviceOnline == true)
-    {
-        isDeviceOnline = false;
-        ui->labelDeviceState->setText(deviceOfflineString);
-    }
+    setDeviceOnline(false);
 
     ui->pushButtonPortConnect->setText("Open");
     ui->pushButtonPortConnect->setChecked(false);
@@ -131,9 +124,6 @@ void Connector::onPortClosed()
     ui->comboBoxPortName->setEnabled(true);
     ui->comboBoxBaudRate->setEnabled(true);
     updatePortList();
-
-    ui->tabWidget->setEnabled(false);
-    ui->tabDownload->setEnabled(false);
 }
 
 void Connector::onPortRead(QByteArray data)
@@ -142,9 +132,8 @@ void Connector::onPortRead(QByteArray data)
     {
         if (isDeviceOnline == false)
         {
-            isDeviceOnline = true;
             qInfo() << deviceOnlineString;
-            ui->labelDeviceState->setText(deviceOnlineString);
+            setDeviceOnline(true);
         }
 
         deviceOnlineTimer->start(deviceOnlineTimeout);
@@ -153,10 +142,28 @@ void Connector::onPortRead(QByteArray data)
 
 void Connector::onDeviceOnlineTimeout()
 {
-    if (isDeviceOnline == true)
+    qWarning() << deviceOfflineString;
+    setDeviceOnline(false);
+}
+
+void Connector::setDeviceOnline(bool isOnline)
+{
+    if (isDeviceOnline != isOnline)
     {
-        isDeviceOnline = false;
-        qWarning() << deviceOfflineString;
-        ui->labelDeviceState->setText(deviceOfflineString);
+        isDeviceOnline = isOnline;
+        if (isDeviceOnline == true)
+        {
+            ui->labelDeviceState->setText(deviceOnlineString);
+
+            ui->tabWidget->setEnabled(true);
+            ui->tabDownload->setEnabled(true);
+        }
+        else
+        {
+            ui->labelDeviceState->setText(deviceOfflineString);
+
+            ui->tabWidget->setEnabled(false);
+            ui->tabDownload->setEnabled(false);
+        }
     }
 }

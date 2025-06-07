@@ -28,6 +28,8 @@ private slots:
     void onDeviceOnlineTimeout();
 
 private:
+    void setDeviceOnline(bool isOnline);
+
     QString portName;
     bool portListIsUpdating = false;
     bool isDeviceOnline = false;
