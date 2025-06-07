@@ -88,19 +88,25 @@ void SerialPort::close()
     }
 }
 
-void SerialPort::write(const QByteArray &data)
+bool SerialPort::write(const QByteArray &data)
 {
+    bool result = false;
+
     qDebug() << "Write:" << data;
+
     const qint64 written = qSerialPort->write(data);
     if (written == data.size())
     {
         bytesToWrite += written;
         writeTimer->start(writeTimeout);
+        result = true;
     }
     else
     {
         qWarning() << "Port" << qSerialPort->portName() << "write failed:" << qSerialPort->errorString();
     }
+
+    return result;
 }
 
 void SerialPort::onPortError(QSerialPort::SerialPortError error)

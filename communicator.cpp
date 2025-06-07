@@ -4,8 +4,9 @@
 
 namespace
 {
+constexpr std::chrono::seconds rxWaitTimeout = std::chrono::seconds{1};
 constexpr std::chrono::seconds keepAlivePeriod = std::chrono::seconds{2};
-constexpr std::chrono::seconds readWaitTimeout = std::chrono::seconds{1};
+constexpr std::chrono::seconds ackWaitLongTimeout = std::chrono::seconds{10};
 
 const char *keepAliveCmd = "!123:KPLV\r";
 const char *downloadRecentCmd = "!123:DWNR=";
@@ -13,6 +14,7 @@ const char *downloadHistoricCmd = "!123:DWNH=";
 const char *downloadTypeCmd = "!123:DWNT=";
 const char *downloadSizeCmd = "!123:DWNS?\r";
 const char *downloadDataCmd = "!123:DWND?\r";
+const char *downloadNextCmd = "!123:DWNN\r";
 const char endOfLine = '\r';
 constexpr uint32_t magicPattern = 0xFEDCBA98;
 
@@ -40,15 +42,11 @@ uint16_t crc16_modbus(const QByteArray &data)
 Communicator::Communicator(SerialPort *serialPort, QObject *parent)
     : QObject{parent}
     , serialPort(serialPort)
-    , waitTimer(new QTimer(this))
     , keepAliveTimer(new QTimer(this))
 {
     connect(serialPort, &SerialPort::opened, this, &Communicator::onPortOpened);
     connect(serialPort, &SerialPort::closed, this, &Communicator::onPortClosed);
     connect(serialPort, &SerialPort::read, this, &Communicator::onPortRead);
-
-    connect(waitTimer, &QTimer::timeout, this, &Communicator::onWaitTimeout);
-    waitTimer->setSingleShot(true);
 
     connect(keepAliveTimer, &QTimer::timeout, this, &Communicator::onKeepAliveTimeout);
     keepAliveTimer->setSingleShot(false);
@@ -56,7 +54,6 @@ Communicator::Communicator(SerialPort *serialPort, QObject *parent)
 
 Communicator::~Communicator()
 {
-    delete waitTimer;
     delete keepAliveTimer;
 }
 
@@ -68,8 +65,8 @@ bool Communicator::requestDownloadRecent(int startId, int endId)
     data += QString::number(endId);
     data += endOfLine;
 
-    serialPort->write(data.toUtf8());
-    return true;
+    bool result = sendCommandWithAck(data.toUtf8());
+    return result;
 }
 
 bool Communicator::requestDownloadHitoric(time_t startTime, int startId, int endId)
@@ -82,8 +79,8 @@ bool Communicator::requestDownloadHitoric(time_t startTime, int startId, int end
     data += QString::number(endId);
     data += endOfLine;
 
-    serialPort->write(data.toUtf8());
-    return true;
+    bool result = sendCommandWithAck(data.toUtf8());
+    return result;
 }
 
 bool Communicator::requestDownloadType(int sensorType, int dataType)
@@ -94,21 +91,37 @@ bool Communicator::requestDownloadType(int sensorType, int dataType)
     data += QString::number(dataType);
     data += endOfLine;
 
-    serialPort->write(data.toUtf8());
-    return true;
+    bool result = sendCommandWithAck(data.toUtf8());
+    return result;
 }
 
 bool Communicator::requestDownloadSize(int &size)
 {
-    serialPort->write(downloadSizeCmd);
-    size = 10;
-    return true;
+    bool result = sendCommandWithAck(downloadSizeCmd, ackWaitLongTimeout);
+    if (result == true && textData.length() > 0)
+    {
+        size = textData.toInt();
+    }
+
+    return result;
 }
 
-bool Communicator::requestDownloadData()
+bool Communicator::requestDownloadData(QByteArray &data, int &chunkId)
 {
-    serialPort->write(downloadDataCmd);
-    return true;
+    bool result = sendCommandWithAck(downloadDataCmd, ackWaitLongTimeout, true);
+    if (result == true && binData.size() > 0 && textData.length() > 0)
+    {
+        data = binData;
+        chunkId = textData.toInt();
+    }
+
+    return result;
+}
+
+bool Communicator::requestDownloadNext()
+{
+    bool result = sendCommandWithAck(downloadNextCmd);
+    return result;
 }
 
 void Communicator::onPortOpened()
@@ -124,62 +137,76 @@ void Communicator::onPortClosed()
 
 void Communicator::onPortRead(QByteArray data)
 {
-    // qDebug() << "Read:" << data.size();
-
-    waitTimer->start(readWaitTimeout);
     keepAliveTimer->start(keepAlivePeriod);
 
     for (uint8_t byte : data)
     {
-        switch (state)
+        switch (rxState)
         {
-        case State::WaitBinMagic:
+        case RxState::WaitEndLine:
+            if (byte == endOfLine)
+            {
+                isAckReceived = true;
+                emit ackReceived();
+
+                if (rxString.length() > 0)
+                {
+                    textData = rxString;
+                    rxString.clear();
+                    qDebug() << "Text data read:" << textData;
+                    emit textDataReceived(textData);
+                }
+            }
+            else
+            {
+                rxString += (char)byte;
+            }
+            break;
+
+        case RxState::WaitBinMagic:
             binHeader.magic >>= 8;
             binHeader.magic |= (byte << 24);
             if (binHeader.magic == magicPattern)
             {
                 qDebug() << "Magic found";
-                state = State::WaitBinCrcLsb;
+                rxState = RxState::WaitBinCrcLsb;
             }
             break;
 
-        case State::WaitBinCrcLsb:
+        case RxState::WaitBinCrcLsb:
             binHeader.crc16 = byte;
-            state = State::WaitBinCrcMsb;
+            rxState = RxState::WaitBinCrcMsb;
             break;
 
-        case State::WaitBinCrcMsb:
+        case RxState::WaitBinCrcMsb:
             binHeader.crc16 |= byte << 8;
-            state = State::WaitBinLengthLsb;
+            rxState = RxState::WaitBinLengthLsb;
             break;
 
-        case State::WaitBinLengthLsb:
+        case RxState::WaitBinLengthLsb:
             binHeader.length = byte;
-            state = State::WaitBinLengthMsb;
+            rxState = RxState::WaitBinLengthMsb;
             break;
 
-        case State::WaitBinLengthMsb:
+        case RxState::WaitBinLengthMsb:
             binHeader.length |= byte << 8;
-            state = State::WaitBinData;
+            qDebug() << "Wait" << binHeader.length << "bytes bin data";
+            rxState = RxState::WaitBinData;
             binData.clear();
             break;
 
-        case State::WaitBinData:
+        case RxState::WaitBinData:
             binData += byte;
             if (binData.size() >= binHeader.length)
             {
                 uint16_t crc16 = crc16_modbus(binData);
                 if (crc16 == binHeader.crc16)
                 {
-                    emit binDataRead(binData);
+                    qDebug() << "Bin data read, size" << binHeader.length;
+                    emit binDataReceived(binData);
                 }
-                state = State::WaitBinMagic;
+                resetRxState();
             }
-            break;
-
-        case State::WaitEndLine:
-            state = State::WaitBinMagic;
-            waitTimer->stop();
             break;
 
         default:
@@ -189,18 +216,82 @@ void Communicator::onPortRead(QByteArray data)
     }
 }
 
-void Communicator::onWaitTimeout()
-{
-    state = State::WaitBinMagic;
-}
-
 void Communicator::onKeepAliveTimeout()
 {
     sendKeepAlive();
 }
 
-bool Communicator::sendKeepAlive()
+void Communicator::resetRxState()
 {
-    serialPort->write(keepAliveCmd);
-    return true;
+    isAckReceived = false;
+    rxState = RxState::WaitEndLine;
+    rxString.clear();
+}
+
+void Communicator::sendKeepAlive()
+{
+    bool result = serialPort->write(keepAliveCmd);
+    if (result == false)
+    {
+        qWarning() << "Keep alive skipped";
+    }
+}
+
+bool Communicator::sendCommandWithAck(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData)
+{
+    if (isSendInProgress == false)
+    {
+        isSendInProgress = true;
+    }
+    else
+    {
+        return false;
+    }
+
+    if (waitBinData == true)
+    {
+        rxState = RxState::WaitBinMagic;
+    }
+    else
+    {
+        resetRxState();
+    }
+
+    bool result = serialPort->write(data);
+    if (result == true)
+    {
+        result = waitForAck(timeout);
+        if (result == true)
+        {
+            qDebug() << "Ack received";
+        }
+        else
+        {
+            qWarning() << "No ack";
+        }
+    }
+
+    if (result != true)
+    {
+        qWarning() << "Send command failed";
+    }
+
+    isSendInProgress = false;
+
+    return result;
+}
+
+bool Communicator::waitForAck(std::chrono::milliseconds timeout)
+{
+    QEventLoop loop;
+    QTimer timeoutTimer;
+
+    timeoutTimer.setSingleShot(true);
+    connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    connect(this, &Communicator::ackReceived, &loop, &QEventLoop::quit);
+
+    timeoutTimer.start(timeout);
+    loop.exec();
+
+    return isAckReceived;
 }

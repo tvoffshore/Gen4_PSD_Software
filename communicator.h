@@ -3,21 +3,22 @@
 
 #include <QByteArray>
 #include <QObject>
+#include <QString>
 #include <QTimer>
 
 #include "serialport.h"
 
 class Communicator : public QObject
 {
-    enum class State
+    enum class RxState
     {
+        WaitEndLine,
         WaitBinMagic,
         WaitBinCrcLsb,
         WaitBinCrcMsb,
         WaitBinLengthLsb,
         WaitBinLengthMsb,
         WaitBinData,
-        WaitEndLine,
     };
 
     struct BinHeader
@@ -26,6 +27,8 @@ class Communicator : public QObject
         uint16_t crc16;
         uint16_t length;
     };
+
+    static constexpr std::chrono::seconds ackWaitTimeout = std::chrono::seconds{1};
 
     Q_OBJECT
 public:
@@ -36,26 +39,35 @@ public:
     bool requestDownloadHitoric(time_t startTime, int startId, int endId);
     bool requestDownloadType(int sensorType, int dataType);
     bool requestDownloadSize(int &size);
-    bool requestDownloadData();
+    bool requestDownloadData(QByteArray &data, int &chunkId);
+    bool requestDownloadNext();
 
 signals:
-    void binDataRead(const QByteArray &data);
+    void textDataReceived(const QString &string);
+    void binDataReceived(const QByteArray &data);
+    void ackReceived();
 
 private slots:
     void onPortOpened();
     void onPortClosed();
     void onPortRead(QByteArray data);
-    void onWaitTimeout();
     void onKeepAliveTimeout();
 
 private:
-    bool sendKeepAlive();
+    void resetRxState();
+    void sendKeepAlive();
+    bool sendCommandWithAck(const QByteArray &data, std::chrono::milliseconds timeout = ackWaitTimeout,
+                            bool waitBinData = false);
+    bool waitForAck(std::chrono::milliseconds timeout);
 
     SerialPort *serialPort = nullptr;
-    QTimer *waitTimer = nullptr;
     QTimer *keepAliveTimer = nullptr;
 
-    State state = State::WaitBinMagic;
+    bool isAckReceived = false;
+    bool isSendInProgress = false;
+    RxState rxState = RxState::WaitEndLine;
+    QString rxString;
+    QString textData;
     BinHeader binHeader;
     QByteArray binData;
 };

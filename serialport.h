@@ -17,7 +17,7 @@ public:
     bool isOpened();
     bool open(const QString &portName, int baudRate);
     void close();
-    void write(const QByteArray &data);
+    bool write(const QByteArray &data);
 
 signals:
     void opened();
