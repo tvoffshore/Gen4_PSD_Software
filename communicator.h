@@ -12,13 +12,13 @@ class Communicator : public QObject
 {
     enum class RxState
     {
-        WaitEndLine,
         WaitBinMagic,
         WaitBinCrcLsb,
         WaitBinCrcMsb,
         WaitBinLengthLsb,
         WaitBinLengthMsb,
         WaitBinData,
+        WaitEndLine,
     };
 
     struct BinHeader
@@ -27,8 +27,6 @@ class Communicator : public QObject
         uint16_t crc16;
         uint16_t length;
     };
-
-    static constexpr std::chrono::seconds ackWaitTimeout = std::chrono::seconds{1};
 
     Q_OBJECT
 public:
@@ -54,10 +52,9 @@ private slots:
     void onKeepAliveTimeout();
 
 private:
-    void resetRxState();
+    void resetRxState(bool waitBinData = false);
     void sendKeepAlive();
-    bool sendCommandWithAck(const QByteArray &data, std::chrono::milliseconds timeout = ackWaitTimeout,
-                            bool waitBinData = false);
+    bool sendCommand(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData = false);
     bool waitForAck(std::chrono::milliseconds timeout);
 
     SerialPort *serialPort = nullptr;

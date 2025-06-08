@@ -4,8 +4,12 @@
 
 namespace
 {
+constexpr int commandRetryCountMax = 3;
+
 constexpr std::chrono::seconds rxWaitTimeout = std::chrono::seconds{1};
 constexpr std::chrono::seconds keepAlivePeriod = std::chrono::seconds{2};
+constexpr std::chrono::seconds ackNoWaitTimeout = std::chrono::seconds{0};
+constexpr std::chrono::seconds ackWaitShortTimeout = std::chrono::seconds{3};
 constexpr std::chrono::seconds ackWaitLongTimeout = std::chrono::seconds{10};
 
 const char *keepAliveCmd = "!123:KPLV\r";
@@ -65,7 +69,7 @@ bool Communicator::requestDownloadRecent(int startId, int endId)
     data += QString::number(endId);
     data += endOfLine;
 
-    bool result = sendCommandWithAck(data.toUtf8());
+    bool result = sendCommand(data.toUtf8(), ackWaitShortTimeout);
     return result;
 }
 
@@ -79,7 +83,7 @@ bool Communicator::requestDownloadHitoric(time_t startTime, int startId, int end
     data += QString::number(endId);
     data += endOfLine;
 
-    bool result = sendCommandWithAck(data.toUtf8());
+    bool result = sendCommand(data.toUtf8(), ackWaitShortTimeout);
     return result;
 }
 
@@ -91,13 +95,13 @@ bool Communicator::requestDownloadType(int sensorType, int dataType)
     data += QString::number(dataType);
     data += endOfLine;
 
-    bool result = sendCommandWithAck(data.toUtf8());
+    bool result = sendCommand(data.toUtf8(), ackWaitShortTimeout);
     return result;
 }
 
 bool Communicator::requestDownloadSize(int &size)
 {
-    bool result = sendCommandWithAck(downloadSizeCmd, ackWaitLongTimeout);
+    bool result = sendCommand(downloadSizeCmd, ackWaitLongTimeout);
     if (result == true && textData.length() > 0)
     {
         size = textData.toInt();
@@ -108,7 +112,7 @@ bool Communicator::requestDownloadSize(int &size)
 
 bool Communicator::requestDownloadData(QByteArray &data, int &chunkId)
 {
-    bool result = sendCommandWithAck(downloadDataCmd, ackWaitLongTimeout, true);
+    bool result = sendCommand(downloadDataCmd, ackWaitLongTimeout, true);
     if (result == true && binData.size() > 0 && textData.length() > 0)
     {
         data = binData;
@@ -120,7 +124,7 @@ bool Communicator::requestDownloadData(QByteArray &data, int &chunkId)
 
 bool Communicator::requestDownloadNext()
 {
-    bool result = sendCommandWithAck(downloadNextCmd);
+    bool result = sendCommand(downloadNextCmd, ackWaitShortTimeout);
     return result;
 }
 
@@ -143,32 +147,12 @@ void Communicator::onPortRead(QByteArray data)
     {
         switch (rxState)
         {
-        case RxState::WaitEndLine:
-            if (byte == endOfLine)
-            {
-                isAckReceived = true;
-                emit ackReceived();
-
-                if (rxString.length() > 0)
-                {
-                    textData = rxString;
-                    rxString.clear();
-                    qDebug() << "Text data read:" << textData;
-                    emit textDataReceived(textData);
-                }
-            }
-            else
-            {
-                rxString += (char)byte;
-            }
-            break;
-
         case RxState::WaitBinMagic:
             binHeader.magic >>= 8;
             binHeader.magic |= (byte << 24);
             if (binHeader.magic == magicPattern)
             {
-                qDebug() << "Magic found";
+                qDebug() << "Magic word found";
                 rxState = RxState::WaitBinCrcLsb;
             }
             break;
@@ -190,7 +174,7 @@ void Communicator::onPortRead(QByteArray data)
 
         case RxState::WaitBinLengthMsb:
             binHeader.length |= byte << 8;
-            qDebug() << "Wait" << binHeader.length << "bytes bin data";
+            qDebug() << "Wait BIN data:" << binHeader.length << "bytes";
             rxState = RxState::WaitBinData;
             binData.clear();
             break;
@@ -202,10 +186,30 @@ void Communicator::onPortRead(QByteArray data)
                 uint16_t crc16 = crc16_modbus(binData);
                 if (crc16 == binHeader.crc16)
                 {
-                    qDebug() << "Bin data read, size" << binHeader.length;
+                    qDebug() << "Received BIN data:" << binHeader.length << "bytes";
                     emit binDataReceived(binData);
                 }
-                resetRxState();
+                rxState = RxState::WaitEndLine;
+            }
+            break;
+
+        case RxState::WaitEndLine:
+            if (byte == endOfLine)
+            {
+                isAckReceived = true;
+                emit ackReceived();
+
+                if (rxString.length() > 0)
+                {
+                    textData = rxString;
+                    rxString.clear();
+                    qDebug() << "Received TEXT data:" << textData;
+                    emit textDataReceived(textData);
+                }
+            }
+            else
+            {
+                rxString += (char)byte;
             }
             break;
 
@@ -221,10 +225,10 @@ void Communicator::onKeepAliveTimeout()
     sendKeepAlive();
 }
 
-void Communicator::resetRxState()
+void Communicator::resetRxState(bool waitBinData)
 {
+    rxState = waitBinData ? RxState::WaitBinMagic : RxState::WaitEndLine;
     isAckReceived = false;
-    rxState = RxState::WaitEndLine;
     rxString.clear();
 }
 
@@ -237,7 +241,7 @@ void Communicator::sendKeepAlive()
     }
 }
 
-bool Communicator::sendCommandWithAck(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData)
+bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData)
 {
     if (isSendInProgress == false)
     {
@@ -245,35 +249,36 @@ bool Communicator::sendCommandWithAck(const QByteArray &data, std::chrono::milli
     }
     else
     {
+        qWarning() << "Command sending is in progress";
         return false;
     }
 
-    if (waitBinData == true)
+    int retryCount = 0;
+    bool result = false;
+    while (result == false && retryCount < commandRetryCountMax)
     {
-        rxState = RxState::WaitBinMagic;
-    }
-    else
-    {
-        resetRxState();
-    }
+        // Reset RX states before sending the request to get valid response
+        resetRxState(waitBinData);
 
-    bool result = serialPort->write(data);
-    if (result == true)
-    {
-        result = waitForAck(timeout);
-        if (result == true)
+        result = serialPort->write(data);
+        if (result == true && timeout > ackNoWaitTimeout)
         {
-            qDebug() << "Ack received";
+            result = waitForAck(timeout);
+            if (result == true)
+            {
+                qDebug() << "Ack received";
+            }
+            else
+            {
+                qWarning() << "No ack";
+            }
         }
-        else
-        {
-            qWarning() << "No ack";
-        }
+        retryCount++;
     }
 
     if (result != true)
     {
-        qWarning() << "Send command failed";
+        qCritical() << "Send command failed";
     }
 
     isSendInProgress = false;

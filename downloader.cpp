@@ -7,7 +7,6 @@
 
 namespace
 {
-constexpr int downloadFailedCountMax = 3;
 constexpr int sensorTypeCount = 6;
 constexpr int dataTypeCount = 3;
 
@@ -95,7 +94,7 @@ bool Downloader::download()
         return false;
     }
 
-    qInfo() << "Download size bytes:" << downloadSize;
+    qInfo() << "Download size:" << downloadSize << "bytes";
 
     QDateTime dateTime = QDateTime::currentDateTime();
     QString fileName = QString(fileNames[sensorType][dataType]) + "_" + dateTime.toString("yyyyMMdd_hhmmss") + ".bin";
@@ -110,47 +109,38 @@ bool Downloader::download()
         return false;
     }
 
-    QProgressDialog progress("Downloading...", "Cancel", 0, downloadSize);
+    QProgressDialog progress("Downloading packets...", "Cancel", 0, downloadSize);
     progress.setWindowTitle("Device assistant");
     progress.setModal(true);
     progress.setValue(0);
     progress.show();
 
     int downloadOffset = 0;
-    int downloadFailedCount = 0;
     while (downloadOffset < downloadSize && progress.wasCanceled() == false)
     {
         QByteArray data;
         int chunkId = 0;
         result = communicator->requestDownloadData(data, chunkId);
-        if (result == true)
+        if (result == false)
         {
-            file.write(data);
-            downloadFailedCount = 0;
-            downloadOffset += data.size();
-            qInfo() << "Packet" << chunkId << "ready, bytes" << downloadOffset;
-
-            if (progress.wasCanceled() == false)
-            {
-                progress.setValue(downloadOffset);
-            }
-
-            result = communicator->requestDownloadNext();
-            if (result == false)
-            {
-                qCritical() << "Request next data chunk failed";
-                break;
-            }
+            qCritical() << "Download data chunk failed";
+            break;
         }
-        else
+
+        file.write(data);
+        downloadOffset += data.size();
+        qInfo() << "Packet" << chunkId << "is ready, total" << downloadOffset << "bytes";
+
+        if (progress.wasCanceled() == false)
         {
-            qWarning() << "Download data chunk failed";
-            downloadFailedCount++;
-            if (downloadFailedCount >= downloadFailedCountMax)
-            {
-                qCritical() << "Abort downloading after failed count:" << downloadFailedCount;
-                break;
-            }
+            progress.setValue(downloadOffset);
+        }
+
+        result = communicator->requestDownloadNext();
+        if (result == false)
+        {
+            qCritical() << "Request next data chunk failed";
+            break;
         }
     }
 
