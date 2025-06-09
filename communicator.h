@@ -21,6 +21,19 @@ class Communicator : public QObject
         WaitEndLine,
     };
 
+    enum class AckState
+    {
+        None,
+        WaitRx,
+        Received,
+    };
+
+    enum class SendState
+    {
+        None,
+        InProgress,
+    };
+
     struct BinHeader
     {
         uint32_t magic;
@@ -60,10 +73,9 @@ private:
     SerialPort *serialPort = nullptr;
     QTimer *keepAliveTimer = nullptr;
 
-    bool isAckReceived = false;
-    bool isSendInProgress = false;
     RxState rxState = RxState::WaitEndLine;
-    QString rxString;
+    AckState ackState = AckState::None;
+    SendState sendState = SendState::None;
     QString textData;
     BinHeader binHeader;
     QByteArray binData;

@@ -196,20 +196,25 @@ void Communicator::onPortRead(QByteArray data)
         case RxState::WaitEndLine:
             if (byte == endOfLine)
             {
-                isAckReceived = true;
-                emit ackReceived();
-
-                if (rxString.length() > 0)
+                if (ackState == AckState::WaitRx)
                 {
-                    textData = rxString;
-                    rxString.clear();
-                    qDebug() << "Received TEXT data:" << textData;
-                    emit textDataReceived(textData);
+                    ackState = AckState::Received;
+                    qDebug() << "Ack received";
+                    emit ackReceived();
+
+                    if (textData.length() > 0)
+                    {
+                        qDebug() << "Received TEXT data:" << textData;
+                        emit textDataReceived(textData);
+                    }
                 }
             }
             else
             {
-                rxString += (char)byte;
+                if (ackState == AckState::WaitRx)
+                {
+                    textData += (char)byte;
+                }
             }
             break;
 
@@ -228,33 +233,31 @@ void Communicator::onKeepAliveTimeout()
 void Communicator::resetRxState(bool waitBinData)
 {
     rxState = waitBinData ? RxState::WaitBinMagic : RxState::WaitEndLine;
-    isAckReceived = false;
-    rxString.clear();
+    ackState = AckState::WaitRx;
+    textData.clear();
 }
 
 void Communicator::sendKeepAlive()
 {
     bool result = serialPort->write(keepAliveCmd);
-    if (result == false)
+    if (result == true && ackState == AckState::WaitRx)
     {
-        qWarning() << "Keep alive skipped";
+        ackState = AckState::None;
     }
 }
 
 bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData)
 {
-    if (isSendInProgress == false)
-    {
-        isSendInProgress = true;
-    }
-    else
+    if (sendState == SendState::InProgress)
     {
         qWarning() << "Command sending is in progress";
         return false;
     }
 
-    int retryCount = 0;
+    sendState = SendState::InProgress;
+
     bool result = false;
+    int retryCount = 0;
     while (result == false && retryCount < commandRetryCountMax)
     {
         // Reset RX states before sending the request to get valid response
@@ -264,11 +267,7 @@ bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds
         if (result == true && timeout > ackNoWaitTimeout)
         {
             result = waitForAck(timeout);
-            if (result == true)
-            {
-                qDebug() << "Ack received";
-            }
-            else
+            if (result == false)
             {
                 qWarning() << "No ack";
             }
@@ -281,7 +280,7 @@ bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds
         qCritical() << "Send command failed";
     }
 
-    isSendInProgress = false;
+    sendState = SendState::None;
 
     return result;
 }
@@ -298,5 +297,6 @@ bool Communicator::waitForAck(std::chrono::milliseconds timeout)
     timeoutTimer.start(timeout);
     loop.exec();
 
-    return isAckReceived;
+    bool result = ackState == AckState::Received;
+    return result;
 }
