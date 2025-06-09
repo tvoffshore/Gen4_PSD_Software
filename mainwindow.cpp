@@ -21,7 +21,7 @@ SerialPort *serialPort = nullptr;
 // Major application version
 constexpr int versionMajor = 0;
 // Minor application version
-constexpr int versionMinor = 1;
+constexpr int versionMinor = 2;
 }
 
 MainWindow::MainWindow(QWidget *parent)
