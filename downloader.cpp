@@ -7,17 +7,27 @@
 
 namespace
 {
-constexpr int sensorTypeCount = 6;
-constexpr int dataTypeCount = 3;
+// Sensor names list
+const char *sensorNames[] = {
+    "ACC_X",
+    "ACC_Y",
+    "ACC_Z",
+    "ACC_RES",
+    "GYR_X",
+    "GYR_Y",
+    "GYR_Z",
+    "ROLL",
+    "PITCH",
+    "ADC1",
+    "ADC2",
+};
 
-const char *fileNames[sensorTypeCount][dataTypeCount] = {
-    {"PSD_ACC", "STAT_ACC", "RAW_ACC"},
-    {"PSD_GYR", "STAT_GYR", "RAW_GYR"},
-    {"PSD_ANG", "STAT_ANG", "RAW_ANG"},
-    {"PSD_ADC1", "STAT_ADC1", "RAW_/ADC1"},
-    {"PSD_ADC2", "STAT_ADC2", "RAW_ADC2"},
-    {"PSD_ACC_RES", "STAT_ACC_RES", "RAW_ACC_RES"},
-    };
+// Data names list
+const char *dataNames[] = {
+    "PSD",
+    "STAT",
+    "RAW",
+};
 }
 
 Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *parent)
@@ -27,9 +37,15 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
 {
     connect(ui->pushButtonDownload, &QPushButton::clicked, this, [=](){
         ui->pushButtonDownload->setEnabled(false);
+        ui->textBrowserDownload->clear();
 
+        qInfo() << "Start downloading";
         bool result = download();
-        if (result == false)
+        if (result == true)
+        {
+            qInfo() << "Downloading finished";
+        }
+        else
         {
             qWarning() << "Downloading failed";
         }
@@ -97,7 +113,8 @@ bool Downloader::download()
     qInfo() << "Download size:" << downloadSize << "bytes";
 
     QDateTime dateTime = QDateTime::currentDateTime();
-    QString fileName = QString(fileNames[sensorType][dataType]) + "_" + dateTime.toString("yyyyMMdd_hhmmss") + ".bin";
+    QString fileName = QString(dataNames[dataType]) + "_" + QString(sensorNames[sensorType]) +
+                       "_" + dateTime.toString("yyyyMMdd_hhmmss") + ".bin";
 
     QFile file;
     file.setFileName(fileName);

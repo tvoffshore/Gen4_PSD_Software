@@ -297,17 +297,47 @@
            <widget class="QComboBox" name="comboBoxTypeSensor">
             <item>
              <property name="text">
-              <string>Accel</string>
+              <string>Accel X</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Gyro</string>
+              <string>Accel Y</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Angle</string>
+              <string>Accel Z</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Accel Result</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Gyro X</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Gyro Y</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Gyro Z</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Roll</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Pitch</string>
              </property>
             </item>
             <item>
@@ -318,11 +348,6 @@
             <item>
              <property name="text">
               <string>Adc 2</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Accel result</string>
              </property>
             </item>
            </widget>
