@@ -28,6 +28,13 @@ class Communicator : public QObject
         Received,
     };
 
+    enum class AckResult
+    {
+        Ok,
+        Timeout,
+        Error,
+    };
+
     enum class SendState
     {
         None,
@@ -68,17 +75,19 @@ private:
     void resetRxState(bool waitBinData = false);
     void sendKeepAlive();
     bool sendCommand(const QByteArray &data, std::chrono::milliseconds timeout, bool waitBinData = false);
-    bool waitForAck(std::chrono::milliseconds timeout);
+    AckResult waitForAck(std::chrono::milliseconds timeout);
 
     SerialPort *serialPort = nullptr;
-    QTimer *keepAliveTimer = nullptr;
+    QTimer keepAliveTimer;
+    QTimer ackTimeoutTimer;
+    QEventLoop ackEventLoop;
 
     RxState rxState = RxState::WaitEndLine;
     AckState ackState = AckState::None;
     SendState sendState = SendState::None;
-    QString textData;
-    BinHeader binHeader;
-    QByteArray binData;
+    QString rxTextData;
+    BinHeader rxBinHeader;
+    QByteArray rxBinData;
 };
 
 #endif // COMMUNICATOR_H

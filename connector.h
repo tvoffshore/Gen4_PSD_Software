@@ -19,6 +19,8 @@ public:
     void updatePortList();
 
 signals:
+    void deviceOnline();
+    void deviceOffline();
 
 private slots:
     void onPortConnect();
@@ -36,7 +38,7 @@ private:
 
     Ui::MainWindow *ui = nullptr;
     SerialPort *serialPort = nullptr;
-    QTimer *deviceOnlineTimer = nullptr;
+    QTimer deviceOnlineTimer;
 };
 
 #endif // CONNECTOR_H

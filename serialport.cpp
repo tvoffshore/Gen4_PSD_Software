@@ -12,20 +12,18 @@ constexpr std::chrono::seconds writeTimeout = std::chrono::seconds{5};
 SerialPort::SerialPort(QObject *parent)
     : QObject{parent}
     , qSerialPort(new QSerialPort(this))
-    , writeTimer(new QTimer(this))
 {
     connect(qSerialPort, &QSerialPort::errorOccurred, this, &SerialPort::onPortError);
     connect(qSerialPort, &QSerialPort::bytesWritten, this, &SerialPort::onPortWritten);
     connect(qSerialPort, &QSerialPort::readyRead, this, &SerialPort::onPortReadData);
 
-    connect(writeTimer, &QTimer::timeout, this, &SerialPort::onWriteTimeout);
-    writeTimer->setSingleShot(true);
+    writeTimer.setSingleShot(true);
+    connect(&writeTimer, &QTimer::timeout, this, &SerialPort::onWriteTimeout);
 }
 
 SerialPort::~SerialPort()
 {
     delete qSerialPort;
-    delete writeTimer;
 }
 
 bool SerialPort::isOpened()
@@ -98,7 +96,7 @@ bool SerialPort::write(const QByteArray &data)
     if (written == data.size())
     {
         bytesToWrite += written;
-        writeTimer->start(writeTimeout);
+        writeTimer.start(writeTimeout);
         result = true;
     }
     else
@@ -132,7 +130,7 @@ void SerialPort::onPortWritten(qint64 bytes)
     bytesToWrite -= bytes;
     if (bytesToWrite == 0)
     {
-        writeTimer->stop();
+        writeTimer.stop();
     }
 }
 

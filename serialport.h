@@ -32,7 +32,7 @@ private slots:
 
 private:
     QSerialPort *qSerialPort = nullptr;
-    QTimer *writeTimer = nullptr;
+    QTimer writeTimer;
     qint64 bytesToWrite = 0;
 };
 

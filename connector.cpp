@@ -7,15 +7,14 @@ namespace
 {
 constexpr std::chrono::seconds deviceOnlineTimeout = std::chrono::seconds{5};
 
-const QString deviceOnlineString("Device ONLINE");
-const QString deviceOfflineString("Device OFFLINE");
+const char *deviceOnlineString = "Device ONLINE";
+const char *deviceOfflineString = "Device OFFLINE";
 }
 
 Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent)
     : QObject{parent}
     , ui(ui)
     , serialPort(serialPort)
-    , deviceOnlineTimer(new QTimer(this))
 {
     connect(ui->comboBoxPortName, &QComboBox::currentTextChanged, this, [=](const QString &text) {
         if (text != portName && text.isEmpty() == false &&
@@ -33,8 +32,8 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
     connect(serialPort, &SerialPort::closed, this, &Connector::onPortClosed);
     connect(serialPort, &SerialPort::read, this, &Connector::onPortRead);
 
-    connect(deviceOnlineTimer, &QTimer::timeout, this, &Connector::onDeviceOnlineTimeout);
-    deviceOnlineTimer->setSingleShot(true);
+    deviceOnlineTimer.setSingleShot(true);
+    connect(&deviceOnlineTimer, &QTimer::timeout, this, &Connector::onDeviceOnlineTimeout);
 
     ui->labelDeviceState->setText(deviceOfflineString);
 
@@ -46,7 +45,6 @@ Connector::Connector(Ui::MainWindow *ui, SerialPort *serialPort, QObject *parent
 
 Connector::~Connector()
 {
-    delete deviceOnlineTimer;
 }
 
 void Connector::updatePortList()
@@ -114,7 +112,7 @@ void Connector::onPortOpened()
 
 void Connector::onPortClosed()
 {
-    deviceOnlineTimer->stop();
+    deviceOnlineTimer.stop();
     setDeviceOnline(false);
 
     ui->pushButtonPortConnect->setText("Open");
@@ -136,7 +134,7 @@ void Connector::onPortRead(QByteArray data)
             setDeviceOnline(true);
         }
 
-        deviceOnlineTimer->start(deviceOnlineTimeout);
+        deviceOnlineTimer.start(deviceOnlineTimeout);
     }
 }
 
@@ -157,6 +155,8 @@ void Connector::setDeviceOnline(bool isOnline)
 
             ui->tabWidget->setEnabled(true);
             ui->tabDownload->setEnabled(true);
+
+            emit deviceOnline();
         }
         else
         {
@@ -164,6 +164,8 @@ void Connector::setDeviceOnline(bool isOnline)
 
             ui->tabWidget->setEnabled(false);
             ui->tabDownload->setEnabled(false);
+
+            emit deviceOffline();
         }
     }
 }
