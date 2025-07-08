@@ -15,6 +15,7 @@ SOURCES += \
     logger.cpp \
     main.cpp \
     mainwindow.cpp \
+    parser.cpp \
     serialport.cpp
 
 HEADERS += \
@@ -23,6 +24,7 @@ HEADERS += \
     downloader.h \
     logger.h \
     mainwindow.h \
+    parser.h \
     serialport.h
 
 FORMS += \

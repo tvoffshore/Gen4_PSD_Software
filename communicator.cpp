@@ -110,13 +110,13 @@ bool Communicator::requestDownloadSize(int &size)
     return result;
 }
 
-bool Communicator::requestDownloadData(QByteArray &data, int &chunkId)
+bool Communicator::requestDownloadData(int &packetId, QByteArray &data)
 {
     bool result = sendCommand(downloadDataCmd, ackWaitLongTimeout, true);
     if (result == true && binData.size() > 0 && textData.length() > 0)
     {
+        packetId = textData.toInt();
         data = binData;
-        chunkId = textData.toInt();
     }
 
     return result;

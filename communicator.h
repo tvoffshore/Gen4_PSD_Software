@@ -50,7 +50,7 @@ public:
     bool requestDownloadHitoric(time_t startTime, int startId, int endId);
     bool requestDownloadType(int sensorType, int dataType);
     bool requestDownloadSize(int &size);
-    bool requestDownloadData(QByteArray &data, int &chunkId);
+    bool requestDownloadData(int &packetId, QByteArray &data);
     bool requestDownloadNext();
 
 signals:

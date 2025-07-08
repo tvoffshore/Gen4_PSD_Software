@@ -5,30 +5,7 @@
 #include <QFile>
 #include <QProgressDialog>
 
-namespace
-{
-// Sensor names list
-const char *sensorNames[] = {
-    "ACC_X",
-    "ACC_Y",
-    "ACC_Z",
-    "ACC_RES",
-    "GYR_X",
-    "GYR_Y",
-    "GYR_Z",
-    "ROLL",
-    "PITCH",
-    "ADC1",
-    "ADC2",
-};
-
-// Data names list
-const char *dataNames[] = {
-    "PSD",
-    "STAT",
-    "RAW",
-};
-}
+#include "parser.h"
 
 Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *parent)
     : QObject{parent}
@@ -102,6 +79,12 @@ bool Downloader::download()
         return false;
     }
 
+    QString headerText = QString("Download ") + ui->comboBoxTypeSensor->currentText() + " " +
+                         ui->comboBoxTypeData->currentText() + ", requested " +
+                         QString::number(packetToId - packetFromId + 1) + " " +
+                         QString(ui->radioButtonHistoric->isChecked() ? "historical" : "recent") + " packet(s)";
+    ui->textBrowserDownload->append(headerText);
+
     int downloadSize = 0;
     result = communicator->requestDownloadSize(downloadSize);
     if (result == false)
@@ -113,8 +96,9 @@ bool Downloader::download()
     qInfo() << "Download size:" << downloadSize << "bytes";
 
     QDateTime dateTime = QDateTime::currentDateTime();
-    QString fileName = QString(dataNames[dataType]) + "_" + QString(sensorNames[sensorType]) +
-                       "_" + dateTime.toString("yyyyMMdd_hhmmss") + ".bin";
+    QString fileName = ui->comboBoxTypeData->currentText() + " " +
+                       ui->comboBoxTypeSensor->currentText() + " " +
+                       dateTime.toString("yyyyMMdd_hhmmss") + ".json";
 
     QFile file;
     file.setFileName(fileName);
@@ -133,31 +117,56 @@ bool Downloader::download()
     progress.show();
 
     int downloadOffset = 0;
-    while (downloadOffset < downloadSize && progress.wasCanceled() == false)
+    while (downloadOffset < downloadSize)
     {
-        QByteArray data;
-        int chunkId = 0;
-        result = communicator->requestDownloadData(data, chunkId);
+        int packetId;
+        QByteArray rawData;
+        result = communicator->requestDownloadData(packetId, rawData);
         if (result == false)
         {
-            qCritical() << "Download data chunk failed";
+            qCritical() << "Download data packet failed";
             break;
         }
 
-        file.write(data);
-        downloadOffset += data.size();
-        qInfo() << "Packet" << chunkId << "is ready, total" << downloadOffset << "bytes";
-
-        if (progress.wasCanceled() == false)
-        {
-            progress.setValue(downloadOffset);
-        }
-
-        result = communicator->requestDownloadNext();
+        QByteArray jsonData;
+        result = Parser::toJson(rawData, jsonData);
         if (result == false)
         {
-            qCritical() << "Request next data chunk failed";
+            qCritical() << "Parse data packet failed";
             break;
+        }
+
+        ui->textBrowserDownload->append("Packet " + QString::number(packetId) + ":");
+
+        if (jsonData.isEmpty() == false)
+        {
+            file.write(jsonData);
+            ui->textBrowserDownload->append(jsonData);
+        }
+        else
+        {
+            qWarning() << "Parsed data is empty";
+        }
+
+        downloadOffset += rawData.size();
+        qInfo() << "Packet" << packetId << "is ready, total" << downloadOffset << "bytes";
+
+        if (progress.wasCanceled())
+        {
+            qWarning() << "Download was cancelled";
+            break;
+        }
+
+        progress.setValue(downloadOffset);
+
+        if (downloadOffset < downloadSize)
+        {
+            result = communicator->requestDownloadNext();
+            if (result == false)
+            {
+                qCritical() << "Request next data chunk failed";
+                break;
+            }
         }
     }
 
