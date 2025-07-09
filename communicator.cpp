@@ -15,9 +15,9 @@ const char *keepAliveCmd = "!123:KPLV\r";
 const char *downloadRecentCmd = "!123:DWNR=";
 const char *downloadHistoricCmd = "!123:DWNH=";
 const char *downloadTypeCmd = "!123:DWNT=";
+const char *downloadIdCmd = "!123:DWNI=";
 const char *downloadSizeCmd = "!123:DWNS?\r";
 const char *downloadDataCmd = "!123:DWND?\r";
-const char *downloadNextCmd = "!123:DWNN\r";
 const char endOfLine = '\r';
 constexpr uint32_t magicPattern = 0xFEDCBA98;
 
@@ -112,6 +112,16 @@ bool Communicator::requestDownloadType(int sensorType, int dataType)
     return result;
 }
 
+bool Communicator::requestDownloadId(int id)
+{
+    QString data = downloadIdCmd;
+    data += QString::number(id);
+    data += endOfLine;
+
+    bool result = sendCommand(data.toUtf8(), ackWaitShortTimeout);
+    return result;
+}
+
 bool Communicator::requestDownloadSize(int &size)
 {
     bool result = sendCommand(downloadSizeCmd, ackWaitLongTimeout);
@@ -132,12 +142,6 @@ bool Communicator::requestDownloadData(int &packetId, QByteArray &data)
         data = rxBinData;
     }
 
-    return result;
-}
-
-bool Communicator::requestDownloadNext()
-{
-    bool result = sendCommand(downloadNextCmd, ackWaitShortTimeout);
     return result;
 }
 

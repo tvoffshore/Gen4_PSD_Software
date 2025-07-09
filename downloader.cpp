@@ -147,9 +147,17 @@ bool Downloader::download()
     progress.setValue(0);
     progress.show();
 
+    int downloadId = 0;
     int downloadOffset = 0;
     while (downloadOffset < downloadSize)
     {
+        result = communicator->requestDownloadId(downloadId);
+        if (result == false)
+        {
+            qCritical() << "Request packet id failed";
+            break;
+        }
+
         int packetId;
         QByteArray rawData;
         auto startTime = std::chrono::high_resolution_clock::now();
@@ -160,6 +168,17 @@ bool Downloader::download()
             break;
         }
         auto endTime = std::chrono::high_resolution_clock::now();
+
+        if (packetId == downloadId)
+        {
+            downloadId++;
+        }
+        else
+        {
+            qWarning() << "Packet id" << QString::number(packetId)
+            << "!= download id " << QString::number(downloadId);
+            continue;
+        }
 
 #ifdef QT_DEBUG
         binfile.write(rawData);
@@ -200,16 +219,6 @@ bool Downloader::download()
 
         progress.setLabelText(QString::number(downloadRate, 'g', 2) + " kB/sec");
         progress.setValue(downloadOffset);
-
-        if (downloadOffset < downloadSize)
-        {
-            result = communicator->requestDownloadNext();
-            if (result == false)
-            {
-                qCritical() << "Request next data chunk failed";
-                break;
-            }
-        }
     }
 
     progress.close();

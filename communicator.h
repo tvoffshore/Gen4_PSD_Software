@@ -56,9 +56,9 @@ public:
     bool requestDownloadRecent(int startId, int endId);
     bool requestDownloadHitoric(time_t startTime, int startId, int endId);
     bool requestDownloadType(int sensorType, int dataType);
+    bool requestDownloadId(int id);
     bool requestDownloadSize(int &size);
     bool requestDownloadData(int &packetId, QByteArray &data);
-    bool requestDownloadNext();
 
 signals:
     void textDataReceived(const QString &string);
