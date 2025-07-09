@@ -103,15 +103,16 @@ bool psdToJson(const QByteArray &rawData, QJsonObject &json)
 
     PsdHeader psdHeader;
     memcpy(&psdHeader, rawData.constData(), sizeof(PsdHeader));
-    if (rawData.size() != static_cast<qsizetype>(sizeof(PsdHeader) + psdHeader.points * sizeof(PsdPoint)))
+    const QByteArray psdPointsData = rawData.sliced(sizeof(PsdHeader));
+    if (psdPointsData.size() != static_cast<qsizetype>(psdHeader.points * sizeof(PsdPoint)))
     {
-        qCritical() << "Psd points count" << psdHeader.points << "is invalid";
+        qCritical() << "Psd points size" << psdPointsData.size() << "!= points count" << psdHeader.points;
         return false;
     }
 
     float frequency = 0;
     QJsonArray psdPointsJson;
-    const PsdPoint *psdPoints = reinterpret_cast<const float*>(rawData.sliced(sizeof(PsdHeader)).constData());
+    const PsdPoint *psdPoints = reinterpret_cast<const PsdPoint*>(psdPointsData.constData());
     for (size_t idx = 0; idx < psdHeader.points; idx++)
     {
         QJsonObject pointJson;
@@ -156,7 +157,7 @@ bool Parser::toJson(const QByteArray &rawData, QByteArray &jsonData)
     memcpy(&packetHeader, rawData.constData(), sizeof(packetHeader));
 
     bool result = false;
-    QByteArray packetPayload = rawData.sliced(sizeof(PacketHeader));
+    const QByteArray packetPayload = rawData.sliced(sizeof(PacketHeader));
 
     QJsonObject json;
     json["packet header"] = packetHeader.toJson();
