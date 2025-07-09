@@ -1,7 +1,9 @@
 #include "downloader.h"
 
+#include <chrono>
 #include <QByteArray>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QProgressDialog>
 
@@ -17,10 +19,13 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
         ui->textBrowserDownload->clear();
 
         qInfo() << "Start downloading";
+        auto startTime = std::chrono::high_resolution_clock::now();
         bool result = download();
         if (result == true)
         {
-            qInfo() << "Downloading finished";
+            auto endTime = std::chrono::high_resolution_clock::now();
+            auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+            qInfo() << "Downloading finished in " << durationMs;
         }
         else
         {
@@ -96,22 +101,48 @@ bool Downloader::download()
     qInfo() << "Download size:" << downloadSize << "bytes";
 
     QDateTime dateTime = QDateTime::currentDateTime();
-    QString fileName = ui->comboBoxTypeData->currentText() + " " +
+    QString dirPath = dateTime.toString("yyyy-MM-dd");
+    QString fileName = dirPath + "/" + ui->comboBoxTypeData->currentText() + " " +
                        ui->comboBoxTypeSensor->currentText() + " " +
-                       dateTime.toString("yyyyMMdd_hhmmss") + ".json";
+                       dateTime.toString("yyyyMMdd_hhmmss");
 
-    QFile file;
-    file.setFileName(fileName);
-    qDebug() << "Open file:" << file.fileName();
-    result = file.open(QIODevice::WriteOnly);
+    QDir dir;
+    result = dir.exists(dirPath);
     if (result == false)
     {
-        qCritical() << "File open failed:" << file.errorString();
+        qDebug() << "Create directory:" << dirPath;
+        result = dir.mkpath(dirPath);
+        if (result == false)
+        {
+            qCritical() << "Create directory failed";
+            return false;
+        }
+    }
+
+#ifdef QT_DEBUG
+    QFile binfile;
+    binfile.setFileName(fileName + ".bin");
+    qDebug() << "Open file:" << binfile.fileName();
+    result = binfile.open(QIODevice::WriteOnly);
+    if (result == false)
+    {
+        qCritical() << "File open failed:" << binfile.errorString();
+        return false;
+    }
+#endif // QT_DEBUG
+
+    QFile jsonfile;
+    jsonfile.setFileName(fileName + ".json");
+    qDebug() << "Open file:" << jsonfile.fileName();
+    result = jsonfile.open(QIODevice::WriteOnly);
+    if (result == false)
+    {
+        qCritical() << "File open failed:" << jsonfile.errorString();
         return false;
     }
 
-    QProgressDialog progress("Downloading packets...", "Cancel", 0, downloadSize);
-    progress.setWindowTitle("Device assistant");
+    QProgressDialog progress("", "Cancel", 0, downloadSize);
+    progress.setWindowTitle("Downloading");
     progress.setModal(true);
     progress.setValue(0);
     progress.show();
@@ -121,12 +152,18 @@ bool Downloader::download()
     {
         int packetId;
         QByteArray rawData;
+        auto startTime = std::chrono::high_resolution_clock::now();
         result = communicator->requestDownloadData(packetId, rawData);
         if (result == false)
         {
             qCritical() << "Download data packet failed";
             break;
         }
+        auto endTime = std::chrono::high_resolution_clock::now();
+
+#ifdef QT_DEBUG
+        binfile.write(rawData);
+#endif // QT_DEBUG
 
         QByteArray jsonData;
         result = Parser::toJson(rawData, jsonData);
@@ -140,7 +177,7 @@ bool Downloader::download()
 
         if (jsonData.isEmpty() == false)
         {
-            file.write(jsonData);
+            jsonfile.write(jsonData);
             ui->textBrowserDownload->append(jsonData);
         }
         else
@@ -157,6 +194,11 @@ bool Downloader::download()
             break;
         }
 
+        // Calculate rate of raw data bytes downloading in kB/sec
+        auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        double downloadRate = static_cast<double>(rawData.size()) * 1000 / (durationMs.count() * 1024);
+
+        progress.setLabelText(QString::number(downloadRate, 'g', 2) + " kB/sec");
         progress.setValue(downloadOffset);
 
         if (downloadOffset < downloadSize)
@@ -171,8 +213,12 @@ bool Downloader::download()
     }
 
     progress.close();
-    file.close();
-    qDebug() << "File closed:" << file.fileName();
+#ifdef QT_DEBUG
+    binfile.close();
+    qDebug() << "File closed:" << binfile.fileName();
+#endif // QT_DEBUG
+    jsonfile.close();
+    qDebug() << "File closed:" << jsonfile.fileName();
 
     return result;
 }
