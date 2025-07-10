@@ -58,7 +58,7 @@ bool Downloader::download()
         QDateTime dateTime = ui->dateTimeEditHistoric->dateTime();
         time_t startTime = dateTime.toSecsSinceEpoch();
 
-        bool result = communicator->requestDownloadHitoric(startTime, packetFromId, packetToId);
+        bool result = communicator->setDownloadHistoric(startTime, packetFromId, packetToId);
         if (result == false)
         {
             qCritical() << "Set historic data params failed";
@@ -67,7 +67,7 @@ bool Downloader::download()
     }
     else
     {
-        bool result = communicator->requestDownloadRecent(packetFromId, packetToId);
+        bool result = communicator->setDownloadRecent(packetFromId, packetToId);
         if (result == false)
         {
             qCritical() << "Set recent data params failed";
@@ -77,7 +77,7 @@ bool Downloader::download()
 
     int sensorType = ui->comboBoxTypeSensor->currentIndex();
     int dataType = ui->comboBoxTypeData->currentIndex();
-    bool result = communicator->requestDownloadType(sensorType, dataType);
+    bool result = communicator->setDownloadType(sensorType, dataType);
     if (result == false)
     {
         qCritical() << "Set sensor and data types failed";
@@ -91,7 +91,7 @@ bool Downloader::download()
     ui->textBrowserDownload->append(headerText);
 
     int downloadSize = 0;
-    result = communicator->requestDownloadSize(downloadSize);
+    result = communicator->getDownloadSize(downloadSize);
     if (result == false)
     {
         qCritical() << "Request download size failed";
@@ -151,7 +151,7 @@ bool Downloader::download()
     int downloadOffset = 0;
     while (downloadOffset < downloadSize)
     {
-        result = communicator->requestDownloadId(downloadId);
+        result = communicator->setDownloadId(downloadId);
         if (result == false)
         {
             qCritical() << "Request packet id failed";
@@ -161,7 +161,7 @@ bool Downloader::download()
         int packetId;
         QByteArray rawData;
         auto startTime = std::chrono::high_resolution_clock::now();
-        result = communicator->requestDownloadData(packetId, rawData);
+        result = communicator->getDownloadData(packetId, rawData);
         if (result == false)
         {
             qCritical() << "Download data packet failed";

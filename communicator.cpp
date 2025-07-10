@@ -8,8 +8,8 @@ constexpr int commandRetryCountMax = 3;
 
 constexpr std::chrono::seconds keepAlivePeriod = std::chrono::seconds{2};
 constexpr std::chrono::seconds ackNoWaitTimeout = std::chrono::seconds{0};
-constexpr std::chrono::seconds ackWaitShortTimeout = std::chrono::seconds{3};
-constexpr std::chrono::seconds ackWaitLongTimeout = std::chrono::seconds{10};
+constexpr std::chrono::seconds ackWaitShortTimeout = std::chrono::seconds{2};
+constexpr std::chrono::seconds ackWaitLongTimeout = std::chrono::seconds{5};
 
 const char *keepAliveCmd = "!123:KPLV\r";
 const char *downloadRecentCmd = "!123:DWNR=";
@@ -50,17 +50,8 @@ Communicator::Communicator(SerialPort *serialPort, QObject *parent)
     connect(serialPort, &SerialPort::closed, this, &Communicator::onPortClosed);
     connect(serialPort, &SerialPort::read, this, &Communicator::onPortRead);
 
-    keepAliveTimer.setSingleShot(false);
+    keepAliveTimer.setSingleShot(true);
     connect(&keepAliveTimer, &QTimer::timeout, this, &Communicator::onKeepAliveTimeout);
-
-    ackTimeoutTimer.setSingleShot(true);
-    connect(&ackTimeoutTimer, &QTimer::timeout, this, [=](){
-        if (ackEventLoop.isRunning())
-        {
-            // Ack timeout due to no ACK RX for specified time
-            ackEventLoop.exit(static_cast<int>(AckResult::Timeout));
-        }
-    });
 
     connect(this, &Communicator::ackReceived, this, [=](){
         if (ackEventLoop.isRunning())
@@ -74,7 +65,7 @@ Communicator::~Communicator()
 {
 }
 
-bool Communicator::requestDownloadRecent(int startId, int endId)
+bool Communicator::setDownloadRecent(int startId, int endId)
 {
     QString data = downloadRecentCmd;
     data += QString::number(startId);
@@ -86,7 +77,7 @@ bool Communicator::requestDownloadRecent(int startId, int endId)
     return result;
 }
 
-bool Communicator::requestDownloadHitoric(time_t startTime, int startId, int endId)
+bool Communicator::setDownloadHistoric(time_t startTime, int startId, int endId)
 {
     QString data = downloadHistoricCmd;
     data += QString::number(startTime);
@@ -100,7 +91,7 @@ bool Communicator::requestDownloadHitoric(time_t startTime, int startId, int end
     return result;
 }
 
-bool Communicator::requestDownloadType(int sensorType, int dataType)
+bool Communicator::setDownloadType(int sensorType, int dataType)
 {
     QString data = downloadTypeCmd;
     data += QString::number(sensorType);
@@ -112,7 +103,7 @@ bool Communicator::requestDownloadType(int sensorType, int dataType)
     return result;
 }
 
-bool Communicator::requestDownloadId(int id)
+bool Communicator::setDownloadId(int id)
 {
     QString data = downloadIdCmd;
     data += QString::number(id);
@@ -122,24 +113,38 @@ bool Communicator::requestDownloadId(int id)
     return result;
 }
 
-bool Communicator::requestDownloadSize(int &size)
+bool Communicator::getDownloadSize(int &size)
 {
     bool result = sendCommand(downloadSizeCmd, ackWaitLongTimeout);
-    if (result == true && rxTextData.length() > 0)
+    if (result == true)
     {
-        size = rxTextData.toInt();
+        if (rxTextData.length() > 0)
+        {
+            size = rxTextData.toInt();
+        }
+        else
+        {
+            result = false;
+        }
     }
 
     return result;
 }
 
-bool Communicator::requestDownloadData(int &packetId, QByteArray &data)
+bool Communicator::getDownloadData(int &packetId, QByteArray &data)
 {
     bool result = sendCommand(downloadDataCmd, ackWaitLongTimeout, true);
-    if (result == true && rxBinData.size() > 0 && rxTextData.length() > 0)
+    if (result == true)
     {
-        packetId = rxTextData.toInt();
-        data = rxBinData;
+        if (rxTextData.length() > 0 && rxBinData.size() > 0)
+        {
+            packetId = rxTextData.toInt();
+            data = rxBinData;
+        }
+        else
+        {
+            result = false;
+        }
     }
 
     return result;
@@ -147,8 +152,10 @@ bool Communicator::requestDownloadData(int &packetId, QByteArray &data)
 
 void Communicator::onPortOpened()
 {
-    keepAliveTimer.start(keepAlivePeriod);
+    // Send first keep alive message to the device
     sendKeepAlive();
+    // Start keep alive timer
+    keepAliveTimer.start(keepAlivePeriod);
 }
 
 void Communicator::onPortClosed()
@@ -211,6 +218,10 @@ void Communicator::onPortRead(QByteArray data)
                     qDebug() << "Received BIN data:" << rxBinHeader.length << "bytes";
                     emit binDataReceived(rxBinData);
                 }
+                else
+                {
+                    rxBinData.clear();
+                }
                 rxState = RxState::WaitEndLine;
             }
             break;
@@ -220,15 +231,14 @@ void Communicator::onPortRead(QByteArray data)
             {
                 if (ackState == AckState::WaitRx)
                 {
-                    ackState = AckState::Received;
-                    qDebug() << "Ack received";
-                    emit ackReceived();
-
                     if (rxTextData.length() > 0)
                     {
                         qDebug() << "Received TEXT data:" << rxTextData;
                         emit textDataReceived(rxTextData);
                     }
+                    ackState = AckState::Received;
+                    qDebug() << "Ack received";
+                    emit ackReceived();
                 }
             }
             else
@@ -249,7 +259,10 @@ void Communicator::onPortRead(QByteArray data)
 
 void Communicator::onKeepAliveTimeout()
 {
+    // Send next keep alive message to the device
     sendKeepAlive();
+    // Restart keep alive timer
+    keepAliveTimer.start(keepAlivePeriod);
 }
 
 void Communicator::resetRxState(bool waitBinData)
@@ -264,7 +277,7 @@ void Communicator::sendKeepAlive()
     bool result = serialPort->write(keepAliveCmd);
     if (result == true && ackEventLoop.isRunning())
     {
-        // Ack timeout due to keep alive sending after no RX for specified time
+        // Ack timeout due to keep alive sending after specified time
         ackEventLoop.exit(static_cast<int>(AckResult::Timeout));
     }
 }
@@ -283,9 +296,6 @@ bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds
     int retryCount = 0;
     while (result == false && retryCount < commandRetryCountMax)
     {
-        // Restart keep alive before command send (will be restarted on RX as well)
-        keepAliveTimer.start();
-
         // Reset RX states before sending the request to get valid response
         resetRxState(waitBinData);
 
@@ -320,7 +330,10 @@ bool Communicator::sendCommand(const QByteArray &data, std::chrono::milliseconds
 
 Communicator::AckResult Communicator::waitForAck(std::chrono::milliseconds timeout)
 {
-    ackTimeoutTimer.start(timeout);
+    assert(timeout > ackNoWaitTimeout);
+
+    // Restart keep alive for specified timeout (will be restarted on RX as well)
+    keepAliveTimer.start(timeout);
 
     int code = ackEventLoop.exec();
 

@@ -53,12 +53,12 @@ public:
     explicit Communicator(SerialPort *serialPort, QObject *parent = nullptr);
     ~Communicator();
 
-    bool requestDownloadRecent(int startId, int endId);
-    bool requestDownloadHitoric(time_t startTime, int startId, int endId);
-    bool requestDownloadType(int sensorType, int dataType);
-    bool requestDownloadId(int id);
-    bool requestDownloadSize(int &size);
-    bool requestDownloadData(int &packetId, QByteArray &data);
+    bool setDownloadRecent(int startId, int endId);
+    bool setDownloadHistoric(time_t startTime, int startId, int endId);
+    bool setDownloadType(int sensorType, int dataType);
+    bool setDownloadId(int id);
+    bool getDownloadSize(int &size);
+    bool getDownloadData(int &packetId, QByteArray &data);
 
 signals:
     void textDataReceived(const QString &string);
@@ -79,7 +79,6 @@ private:
 
     SerialPort *serialPort = nullptr;
     QTimer keepAliveTimer;
-    QTimer ackTimeoutTimer;
     QEventLoop ackEventLoop;
 
     RxState rxState = RxState::WaitEndLine;
