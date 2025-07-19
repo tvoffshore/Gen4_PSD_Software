@@ -25,7 +25,7 @@ Downloader::Downloader(Ui::MainWindow *ui, Communicator *communicator, QObject *
         {
             auto endTime = std::chrono::high_resolution_clock::now();
             auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-            qInfo() << "Downloading finished in " << durationMs;
+            qInfo() << "Downloading finished in" << durationMs;
         }
         else
         {
@@ -176,7 +176,7 @@ bool Downloader::download()
         else
         {
             qWarning() << "Packet id" << QString::number(packetId)
-            << "!= download id " << QString::number(downloadId);
+            << "!= download id" << QString::number(downloadId);
             continue;
         }
 

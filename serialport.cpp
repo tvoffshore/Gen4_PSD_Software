@@ -77,7 +77,7 @@ void SerialPort::close()
     if (qSerialPort->isOpen() == true)
     {
         qSerialPort->close();
-        qInfo() << "Port closed: " << qSerialPort->portName();
+        qInfo() << "Port closed:" << qSerialPort->portName();
         emit closed();
     }
     else
