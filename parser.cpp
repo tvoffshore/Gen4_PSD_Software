@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QTimeZone>
 
 namespace
 {
@@ -38,7 +39,8 @@ struct PacketHeader
     {
         QJsonObject json;
 
-        json["start time"] = QDateTime::fromSecsSinceEpoch(startEpochTime).toString("yyyy-MM-dd hh:mm:ss");
+        auto startDateTime = QDateTime::fromSecsSinceEpoch(startEpochTime, QTimeZone::utc());
+        json["start time"] = startDateTime.toString("yyyy-MM-dd hh:mm:ss");
         json["duration ms"] = static_cast<int>(durationMs);
         json["sample time ms"] = static_cast<int>(sampleTimeMs);
 
