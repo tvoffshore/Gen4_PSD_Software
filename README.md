@@ -7,5 +7,5 @@ Assistant application and the board.
 
 To disable logging on the USB interface, send the following command before attempting communication:
 **bold**
-<pre> \`\`\` !123:LOGL=0 \`\`\` </pre>
+!123:LOGL=0 
 __bold__
