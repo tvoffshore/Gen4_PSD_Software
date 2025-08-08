@@ -6,6 +6,4 @@ While USB can be used at a higher baud rate (115200), it requires disabling inte
 Assistant application and the board.
 
 To disable logging on the USB interface, send the following command before attempting communication:
-**bold**
-!123:LOGL=0 
-__bold__
+**!123:LOGL=0 **
